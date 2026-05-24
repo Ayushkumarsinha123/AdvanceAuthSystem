@@ -3,6 +3,9 @@
   "version": "1.0.0",
   "description": "Authentication system",
   "type": "module",
+  "imports": {
+    "#db": "./generated/prisma/index.js"
+  },
   "main": "dist/index.js",
   "scripts": {
     "dev": "tsx watch src/index.ts",
