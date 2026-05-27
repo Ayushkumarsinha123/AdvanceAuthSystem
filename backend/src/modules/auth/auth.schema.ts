@@ -11,4 +11,14 @@ export const registerSchema = z.object({
   })
 })
 
+export const loginSchema = z.object({
+  body : z.object({
+    email : z
+      .string({error : 'email is required'})
+      .email('Invalid email address format'),
+      password : z
+      .string({error : 'password is required' })
+  })
+})
+
 export type RegisterInput = z.infer<typeof registerSchema>;

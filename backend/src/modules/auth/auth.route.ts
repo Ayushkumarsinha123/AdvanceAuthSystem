@@ -1,6 +1,6 @@
 import { Router, Request, Response, NextFunction } from "express";
 import { authController } from "./auth.container.js";
-import { registerSchema } from "./auth.schema.js";
+import { registerSchema ,loginSchema} from "./auth.schema.js";
 import { success, ZodObject } from "zod";
 
 const router = Router();
@@ -34,5 +34,6 @@ const validate = (schema: ZodObject) => {
 };
 
 router.post('/register', validate(registerSchema), authController.register);
+router.post('/login', validate(loginSchema), authController.login);
 
 export default router;

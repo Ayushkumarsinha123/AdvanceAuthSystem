@@ -27,4 +27,25 @@ export class AuthController {
   next(error);
  }
   }
+
+  login = async (req : Request , res : Response , next : NextFunction) : Promise<void> => {
+    try {
+      const {email , password} = req.body;
+
+      // execute our login processing service
+      const { accessToken , user } = await this.authService.loginLocalUser(email , password);
+
+      // we send the access token directly back in the JSON body
+      res.status(200).json({
+        success: true,
+        message: 'logged in successfully',
+        data: {
+          accessToken,
+          user,
+        }
+      })
+    } catch(error) {
+        next();
+    }
+  }
 }
