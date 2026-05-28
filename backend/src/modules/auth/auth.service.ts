@@ -1,8 +1,11 @@
 import bcrypt from 'bcrypt';
-import { User } from '#db'
+import crypto from 'crypto';
+import { User } from '#db';
 import { IAuthRepository } from './auth.interface.js';
 import jwt, { Secret } from 'jsonwebtoken';
-import {env} from "../../config/env.config.js"
+import {env} from "../../config/env.config.js";
+import { signAccessToken, signRefreshToken } from '../../utils/jwt.utils.js';
+import ms from 'ms';
 
 
 export class AuthService {
@@ -25,7 +28,11 @@ export class AuthService {
     return newUser;
   }
 
-  async loginLocalUser (email : string , password: string) : Promise<{accessToken : string;user :any}> {
+  async loginLocalUser (
+    email : string , 
+    password: string,
+    userAgent?: string | null,
+    ipAddress?: string | null) : Promise<{accessToken : string; refreshToken: string; expiresAt: Date; user :any}> {
     // first verify if user exist in db or not
     const user = await this.authRepository.findUserByEmail(email);
     if(!user || !user.passwordHash) {
@@ -38,21 +45,34 @@ export class AuthService {
       throw new Error('invalid email or password');
     }
 
-    const tokenPayload =  {
-      userId : user.id,
-      email : user.email
-    };
+    // compute expiration timestanps for the sessions tracking record
+    const refreshTokenDuration = String(env.REFRESH_TOKEN_EXPIRES_IN || '7d');
+    const expiresAt = new Date(Date.now() + (ms as any)(refreshTokenDuration));
 
-    const accessToken = jwt.sign(tokenPayload, env.ACCESS_TOKEN_SECRET, {
-      expiresIn: env.ACCESS_TOKEN_EXPIRES_IN,
-    });
+    // generate a temp opaque random string that we will sign as the token core
+    const rawRefreshTokenSeed = crypto.randomBytes(40).toString('hex');
+    const refreshTokenHash = crypto.createHash('sha256').update(rawRefreshTokenSeed).digest('hex');
+
+    // record the active session tracking link inside postgresSQL via the repository
+    const session = await this.authRepository.createSession({
+      userId : user.id,
+      refreshTokenHash,
+      expiresAt,
+      userAgent,
+      ipAddress,
+    })
+    
+    // sign jwt tokens securely 
+    const accessToken = signAccessToken({ userId: user.id , email : user.email});
+    const refreshToken = signRefreshToken({ userId : user.id , email: user.email, sessionId: session.id})
 
     return {
       accessToken,
+      refreshToken,
+      expiresAt,
       user : {
         id : user.id,
         email :user.email,
-        isEmailVerified : user.isEmailVerified,
       }
     }
   }
