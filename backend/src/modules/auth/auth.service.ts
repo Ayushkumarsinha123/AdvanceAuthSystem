@@ -4,8 +4,9 @@ import { User } from '#db';
 import { IAuthRepository } from './auth.interface.js';
 import jwt, { Secret } from 'jsonwebtoken';
 import {env} from "../../config/env.config.js";
-import { signAccessToken, signRefreshToken } from '../../utils/jwt.utils.js';
+import { signAccessToken, signRefreshToken , verifyRefreshToken} from '../../utils/jwt.utils.js';
 import ms from 'ms';
+import { addUncaughtExceptionCaptureCallback } from 'process';
 
 
 export class AuthService {
@@ -75,5 +76,55 @@ export class AuthService {
         email :user.email,
       }
     }
+  }
+
+  async rotateToken(
+    rawRefreshToken : string,
+    userAgent? : string | null,
+    ipAddress? : string | null
+  ) : Promise<{ accessToken : string; refreshToken : string ; expiresAt : Date }> {
+   
+    // decrypt and verify the jwt refresh token
+    let decoded : any ;
+    try {
+      decoded = verifyRefreshToken(rawRefreshToken);
+    } catch(err) {
+      throw new Error ('Refresh token has expires or is deeply malformed.');
+    }
+
+    const activeSession = await this.authRepository.findSessionWithUser(decoded.sessionId);
+
+    if(!activeSession || activeSession.isRevoked || activeSession.isDeleted) {
+      if(activeSession) {
+        await this.authRepository.invalidateSession(activeSession.id);
+      }
+      throw new Error ('security alert : session has been compromised or closed')
+    }
+
+    // invalidate the old session (rotation)
+    await this.authRepository.invalidateSession(activeSession.id);
+
+    // set up the new sessions parameter
+    const refreshTokenDuration = String(env.REFRESH_TOKEN_EXPIRES_IN || '7d');
+    const expiresAt = new Date(Date.now() + (ms as any)(refreshTokenDuration));
+
+    const rawRefreshTokenSeed = crypto.randomBytes(40).toString('hex');
+    const refreshTokenHash= crypto.createHash("sha256").update(rawRefreshTokenSeed).digest('hex')
+
+    // commit the new session to postgresSQL
+    const newSession = await this.authRepository.createSession({
+      userId : activeSession.userId,
+      refreshTokenHash,
+      expiresAt,
+      userAgent: userAgent || activeSession.userAgent,
+      ipAddress: ipAddress || activeSession.ipAddress,
+    });
+
+    // issue the new token pair
+    const accessToken = signAccessToken({ userId: activeSession.userId, email: activeSession.user.email});
+    const refreshToken = signRefreshToken({ userId: activeSession.userId, email: activeSession.user.email, sessionId: newSession.id})
+
+    return {accessToken, refreshToken, expiresAt};
+
   }
 }
