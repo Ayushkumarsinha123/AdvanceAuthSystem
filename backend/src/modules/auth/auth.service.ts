@@ -127,4 +127,18 @@ export class AuthService {
     return {accessToken, refreshToken, expiresAt};
 
   }
+
+  async logoutUser(rawRefreshToken : string) : Promise<void> {
+    // verify the incoming token structure to extract the active session ID 
+    let decoded : any ;
+    try {
+      decoded = verifyRefreshToken(rawRefreshToken);
+    } catch(err) {
+      // if token is already expired or malformed, we don't need to clear it from DB
+      return;
+    }
+
+    // flip the session flags inside the postgreSQL to invalidate it permanently
+    await this.authRepository.invalidateSession(decoded.sessionId);
+  }
 }

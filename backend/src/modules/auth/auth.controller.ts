@@ -109,4 +109,28 @@ export class AuthController {
       res.status(401).json({ success: false, message: error.message });
     }
   };
+
+  logout = async (req : Request, res : Response, next: NextFunction) : Promise<void> => {
+    try {
+      const incomingRefreshToken = req.cookies.refreshToken;
+
+      // if the cookie exist , run our backend cleanup routines
+      if(incomingRefreshToken) {
+        await this.authService.logoutUser(incomingRefreshToken);
+      }
+
+      res.clearCookie('refreshToken',{
+        httpOnly : true,
+        secure: process.env.NODE_ENV === 'PRODUCTION',
+        sameSite : 'strict',
+      });
+
+      res.status(200).json({
+        success : true,
+        message :'logged out successfully. secure sessions closed',
+      });
+    } catch (error){
+      next(error);
+    }
+  }
 }
