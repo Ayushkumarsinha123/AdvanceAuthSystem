@@ -6,6 +6,8 @@ import jwt, { Secret } from 'jsonwebtoken';
 import {env} from "../../config/env.config.js";
 import { signAccessToken, signRefreshToken , verifyRefreshToken} from '../../utils/jwt.utils.js';
 import ms from 'ms';
+import { AppError } from '../../utils/AppError.js'; 
+
 import { addUncaughtExceptionCaptureCallback } from 'process';
 
 
@@ -37,13 +39,13 @@ export class AuthService {
     // first verify if user exist in db or not
     const user = await this.authRepository.findUserByEmail(email);
     if(!user || !user.passwordHash) {
-      throw new Error('invalid email or password')
+      throw new AppError('invalid email or password',401);
     }
 
     // verify the raw password matches our stored bycrypt hash
     const isPasswordValid = await bcrypt.compare(password, user.passwordHash);
     if(!isPasswordValid) {
-      throw new Error('invalid email or password');
+      throw new AppError('invalid email or password',401);
     }
 
     // compute expiration timestanps for the sessions tracking record

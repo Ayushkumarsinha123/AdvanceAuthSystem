@@ -6,6 +6,7 @@ import helmet from 'helmet';
 import { env } from './config/env.config.js'; 
 import { prisma } from './lib/prisma.js';
 import authRouter from './modules/auth/auth.route.js';
+import { errorHandler } from './middlewares/error.middleware.js';
 
 const app = express();
 
@@ -28,6 +29,8 @@ app.get('/health', async (req, res) => {
     res.status(500).json({ status: 'unhealthy', error: (error as Error).message });
   }
 });
+
+app.use(errorHandler);
 
 app.listen(env.PORT, () => {
   console.log(`🚀 Senior Architect server live on: http://localhost:${env.PORT}`);

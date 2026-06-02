@@ -69,7 +69,7 @@ export class AuthController {
         },
       });
     } catch (error) {
-      next();
+      next(error);
     }
   };
 
