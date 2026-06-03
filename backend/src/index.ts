@@ -6,6 +6,7 @@ import helmet from 'helmet';
 import { env } from './config/env.config.js'; 
 import { prisma } from './lib/prisma.js';
 import authRouter from './modules/auth/auth.route.js';
+import  adminRouter  from './modules/admin/admin.route.js';
 import { errorHandler } from './middlewares/error.middleware.js';
 import { requireAuth } from './middlewares/authentication.middleware.js';
 import { requirePermission } from './middlewares/authorization.middleware.js';
@@ -18,6 +19,7 @@ app.use(express.json());
 app.use(cookieParser());
 
 app.use('/api/v1/auth', authRouter);
+app.use('/api/v1/admin', adminRouter);
 
 app.get('/api/v1/users/profile', requireAuth, (req: express.Request, res: express.Response) => {
   // Because the middleware executed successfully, req.user is guaranteed to exist and be fully typed!
