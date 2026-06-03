@@ -1,6 +1,6 @@
 import { Request, Response, NextFunction } from "express";
 import { AppError } from "../utils/AppError.js";
-import jwt from 'jsonwebtoken'
+import jwt from 'jsonwebtoken';
 import env from "../config/env.config.js";
 
 interface IDecodedToken {

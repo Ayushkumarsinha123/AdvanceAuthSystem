@@ -8,6 +8,7 @@ import { prisma } from './lib/prisma.js';
 import authRouter from './modules/auth/auth.route.js';
 import { errorHandler } from './middlewares/error.middleware.js';
 import { requireAuth } from './middlewares/authentication.middleware.js';
+import { requirePermission } from './middlewares/authorization.middleware.js';
 
 const app = express();
 
@@ -26,6 +27,18 @@ app.get('/api/v1/users/profile', requireAuth, (req: express.Request, res: expres
     authenticatedUser: req.user
   });
 }); 
+
+app.post(
+  '/api/v1/admin/roles/assign', 
+  requireAuth,                                // 1. Asserts who the user is
+  requirePermission('MANAGE_USER_ROLES'),     // 2. Asserts what they can do
+  (req: express.Request, res: express.Response) => {
+    res.status(200).json({
+      success: true,
+      message: "Access Granted! Welcome to the Admin Roles Control Panel.",
+    });
+  }
+);
 
 app.get('/health', async (req, res) => {
   try {
